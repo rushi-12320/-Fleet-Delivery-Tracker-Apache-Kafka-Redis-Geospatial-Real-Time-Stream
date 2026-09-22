@@ -29,6 +29,9 @@ dist/
 *.swp
 *.swo
 
+# Generated project metadata
+.azure/
+
 # OS files
 .DS_Store
 Thumbs.db
