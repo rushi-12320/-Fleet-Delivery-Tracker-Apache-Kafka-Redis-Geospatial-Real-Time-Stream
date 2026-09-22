@@ -2,6 +2,12 @@
 
 A real-time delivery fleet monitoring system built with Apache Kafka, Redis geospatial indexing, and FastAPI. It simulates live GPS telemetry from drivers, streams events through Kafka, stores live positions in Redis, and exposes a map-based dashboard and REST API for tracking vehicles in near real time.
 
+## Deployment Platform
+
+This project is configured for a managed Redis deployment on Upstash. The live Redis instance is available here:
+
+https://console.upstash.com/redis/fb39a1ba-9192-4f0c-9c3e-b70f4f151f3a
+
 ## Overview
 
 This application is designed for scenarios where fleets need to monitor delivery vehicles, check nearby drivers, and expose operational insights through a simple dashboard. It demonstrates how to combine streaming data, geospatial queries, and a lightweight web API in a production-style architecture.

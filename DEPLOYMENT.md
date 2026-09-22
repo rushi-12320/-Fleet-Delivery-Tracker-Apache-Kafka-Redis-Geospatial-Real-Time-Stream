@@ -1,6 +1,10 @@
-# 🚀 Free Cloud Deployment Guide
+# 🚀 Cloud Deployment Guide
 
-This guide walks you through deploying your **Real-Time Delivery Tracking System** to a **100% free cloud stack** without needing a credit card.
+This guide explains how to deploy the **Fleet Delivery Tracker** to a managed cloud stack using **Upstash Redis** and optional Kafka services. The project is designed to work with a live Upstash Redis instance, including the deployed platform available here:
+
+https://console.upstash.com/redis/fb39a1ba-9192-4f0c-9c3e-b70f4f151f3a
+
+The setup below is suitable for free or low-cost managed deployments and can be used without needing to host Redis locally.
 
 ```
 ┌────────────────────────────────────────────────────────┐
@@ -21,9 +25,9 @@ This guide walks you through deploying your **Real-Time Delivery Tracking System
 
 ---
 
-## Step 1: Create Free Serverless Kafka & Redis on Upstash (3 minutes)
+## Step 1: Create or Connect Your Upstash Services
 
-Upstash offers truly serverless Kafka and Redis that sleep when inactive and require **no credit card**.
+Upstash offers serverless Kafka and Redis infrastructure for low-latency real-time workloads. This project is already aligned to the managed Redis platform shown above, and you can use the same pattern for Kafka and Redis connections in your environment.
 
 ### 1.1 Create Free Kafka Topic
 1. Go to [console.upstash.com](https://console.upstash.com/) and sign up with GitHub or Google.
