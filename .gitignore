@@ -1,25 +1,50 @@
-# Python virtual environment
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.Python
 venv/
 ENV/
 env/
+.venv/
 
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
+# Packaging / cache
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
-# Environment variables & secrets
+# Environment files
 .env
+.env.*
 *.local
 
-# IDE configurations
+# IDE / editor
 .vscode/
 .idea/
+*.swp
+*.swo
 
-# Operating system files
+# OS files
+.DS_Store
 Thumbs.db
 Desktop.ini
-.DS_Store
 
-# Log files
+# Logs
 *.log
+
+# Docker / local runtime artifacts
+*.pid
+
+# Test output
+coverage/
+htmlcov/
+
+# Keep local virtual envs out of Git
+venv/
+ENV/
+.env.local
