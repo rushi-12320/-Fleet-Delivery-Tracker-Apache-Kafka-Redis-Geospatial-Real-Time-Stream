@@ -28,18 +28,32 @@ REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
 REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", None)
 REDIS_SSL = os.getenv("REDIS_SSL", "false").lower() in ("true", "1", "yes")
+REDIS_SOCKET_TIMEOUT = int(os.getenv("REDIS_SOCKET_TIMEOUT", "5"))
+REDIS_SOCKET_CONNECT_TIMEOUT = int(os.getenv("REDIS_SOCKET_CONNECT_TIMEOUT", "5"))
 
 
 def get_redis_client() -> redis.Redis:
     """Returns a configured Redis client supporting local or cloud (Upstash/Redis Cloud)."""
     if REDIS_URL:
-        return redis.Redis.from_url(REDIS_URL, decode_responses=True)
+        redis_url = REDIS_URL.strip()
+        if redis_url.startswith("redis://") and ("upstash.io" in redis_url.lower() or REDIS_SSL):
+            redis_url = redis_url.replace("redis://", "rediss://", 1)
+        return redis.Redis.from_url(
+            redis_url,
+            decode_responses=True,
+            socket_connect_timeout=REDIS_SOCKET_CONNECT_TIMEOUT,
+            socket_timeout=REDIS_SOCKET_TIMEOUT,
+            retry_on_timeout=True,
+        )
     return redis.Redis(
         host=REDIS_HOST,
         port=REDIS_PORT,
         password=REDIS_PASSWORD if REDIS_PASSWORD else None,
         ssl=REDIS_SSL,
         decode_responses=True,
+        socket_connect_timeout=REDIS_SOCKET_CONNECT_TIMEOUT,
+        socket_timeout=REDIS_SOCKET_TIMEOUT,
+        retry_on_timeout=True,
     )
 
 

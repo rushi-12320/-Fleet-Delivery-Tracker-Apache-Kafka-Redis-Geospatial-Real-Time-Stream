@@ -516,15 +516,37 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=c
     }
 
     async function fetchFleet() {
+      const listContainer = document.getElementById('driver-list');
+
       try {
-        const res = await fetch('/drivers');
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const res = await fetch('/drivers', { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+
         const data = await res.json();
         const drivers = data.drivers || [];
 
         let activeCount = 0;
         let offlineCount = 0;
-        const listContainer = document.getElementById('driver-list');
         listContainer.innerHTML = '';
+
+        if (drivers.length === 0) {
+          listContainer.innerHTML = `
+            <div style="padding: 20px; text-align: center; color: var(--text-muted); line-height: 1.6;">
+              No live telemetry yet.<br>
+              Start the producer or connect Redis/Kafka and the map will populate automatically.
+            </div>
+          `;
+          document.getElementById('stat-active').innerText = '0';
+          document.getElementById('stat-offline').innerText = '0';
+          document.getElementById('stat-total').innerText = '0';
+          return;
+        }
 
         drivers.forEach(d => {
           if (d.is_alive) activeCount++;
@@ -583,13 +605,25 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=c
 
       } catch (err) {
         console.error("Failed to fetch drivers:", err);
+        listContainer.innerHTML = `
+          <div style="padding: 20px; text-align: center; color: #fca5a5; line-height: 1.6;">
+            Telemetry request timed out or backend is unavailable.<br>
+            Check Redis and Kafka connectivity, then refresh the page.
+          </div>
+        `;
+        document.getElementById('stat-active').innerText = '0';
+        document.getElementById('stat-offline').innerText = '0';
+        document.getElementById('stat-total').innerText = '0';
       }
     }
 
     async function fetchNearbyDrivers() {
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
         const url = `/drivers/nearby?lat=${searchCenter[0]}&lon=${searchCenter[1]}&radius_km=${searchRadiusKm}&limit=20`;
-        const res = await fetch(url);
+        const res = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
         const data = await res.json();
         console.log(`Nearby drivers (${data.count}):`, data.drivers);
       } catch (err) {
