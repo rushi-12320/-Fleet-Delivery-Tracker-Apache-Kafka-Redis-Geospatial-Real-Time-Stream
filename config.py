@@ -8,8 +8,8 @@ load_dotenv()
 # Web server port
 PORT = int(os.getenv("PORT", "8000"))
 
-# Coordinates & Simulation Constants
-CENTER = (19.0760, 72.8777)  # Mumbai center
+
+CENTER = (19.0760, 72.8777)
 NUM_DRIVERS = int(os.getenv("NUM_DRIVERS", "20"))
 HEARTBEAT_TTL_SEC = int(os.getenv("HEARTBEAT_TTL_SEC", "15"))
 

@@ -93,33 +93,39 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 3) Start local infrastructure
+### 3) Start with Docker (recommended)
 
-This project includes a local Kafka and Redis setup using Docker.
+Docker Compose starts Kafka, Redis, the telemetry producer and consumer, and
+the FastAPI dashboard. It is the simplest complete local setup.
 
 ```bash
-docker compose up -d
+docker compose up --build
 ```
 
-### 4) Configure environment variables
+Open the dashboard at `http://localhost:8000`. Use `Ctrl+C` to stop it.
 
-Copy the sample file and adjust values if needed:
+### 4) Run the application natively (optional)
+
+If you prefer to run the Python processes directly, start only Kafka and Redis
+from Compose:
+
+```bash
+docker compose up -d kafka redis
+```
+
+Copy the sample environment file, install dependencies, then run the app:
 
 ```bash
 copy .env.example .env
-```
-
-Then review the values inside `.env`.
-
-### 5) Run the application
-
-To start all services together:
-
-```bash
+pip install -r requirements.txt
 python run_all.py
 ```
 
-This starts:
+The default Kafka address, `localhost:9092`, is for this native-run mode. The
+broker uses a separate internal address for the Compose app, so both modes can
+connect reliably.
+
+`run_all.py` starts:
 
 - the Kafka producer simulating delivery vehicle positions
 - the Kafka consumer that writes to Redis
