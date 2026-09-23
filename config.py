@@ -8,10 +8,10 @@ load_dotenv()
 # Web server port
 PORT = int(os.getenv("PORT", "8000"))
 
-
 CENTER = (19.0760, 72.8777)
 NUM_DRIVERS = int(os.getenv("NUM_DRIVERS", "20"))
 HEARTBEAT_TTL_SEC = int(os.getenv("HEARTBEAT_TTL_SEC", "15"))
+DEMO_MODE = os.getenv("DEMO_MODE", "true").lower() in ("true", "1", "yes")
 
 # Kafka Configuration
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")

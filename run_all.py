@@ -15,37 +15,37 @@ if sys.platform == "win32":
 
 PYTHON_EXE = sys.executable
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-from config import PORT
+from config import DEMO_MODE, PORT
 
 
 def main():
     print("=" * 65)
-    print("  Starting Delivery Tracking System (Kafka + Redis + FastAPI)")
+    mode_name = "Public Demo" if DEMO_MODE else "Kafka + Redis + FastAPI"
+    print(f"  Starting Delivery Tracking System ({mode_name})")
     print("=" * 65)
 
     processes = []
 
     try:
-        # 1. Start Consumer
-        print("\n[1/3] Starting Kafka -> Redis Consumer (consumer.py)...")
-        p_consumer = subprocess.Popen(
-            [PYTHON_EXE, "-u", os.path.join(BASE_DIR, "consumer.py")],
-            cwd=BASE_DIR,
-        )
-        processes.append(("Consumer", p_consumer))
-        time.sleep(2)
+        if not DEMO_MODE:
+            print("\n[1/3] Starting Kafka -> Redis Consumer (consumer.py)...")
+            p_consumer = subprocess.Popen(
+                [PYTHON_EXE, "-u", os.path.join(BASE_DIR, "consumer.py")],
+                cwd=BASE_DIR,
+            )
+            processes.append(("Consumer", p_consumer))
+            time.sleep(2)
 
-        # 2. Start Producer
-        print("\n[2/3] Starting Simulated GPS Producer (producer.py)...")
-        p_producer = subprocess.Popen(
-            [PYTHON_EXE, "-u", os.path.join(BASE_DIR, "producer.py")],
-            cwd=BASE_DIR,
-        )
-        processes.append(("Producer", p_producer))
-        time.sleep(1)
+            print("\n[2/3] Starting Simulated GPS Producer (producer.py)...")
+            p_producer = subprocess.Popen(
+                [PYTHON_EXE, "-u", os.path.join(BASE_DIR, "producer.py")],
+                cwd=BASE_DIR,
+            )
+            processes.append(("Producer", p_producer))
+            time.sleep(1)
 
-        # 3. Start API Server
-        print(f"\n[3/3] Starting FastAPI Server on port {PORT}...")
+        api_step = "[1/1]" if DEMO_MODE else "[3/3]"
+        print(f"\n{api_step} Starting FastAPI Server on port {PORT}...")
         p_api = subprocess.Popen(
             [
                 PYTHON_EXE,
@@ -62,7 +62,7 @@ def main():
         processes.append(("API Server", p_api))
 
         print("\n" + "=" * 65)
-        print("  All services running successfully!")
+        print("  Public demo running successfully!" if DEMO_MODE else "  All services running successfully!")
         print(f"  Dashboard: http://localhost:{PORT}")
         print(f"  Health:    http://localhost:{PORT}/health")
         print(f"  API:       http://localhost:{PORT}/drivers/nearby?lat=19.076&lon=72.877")

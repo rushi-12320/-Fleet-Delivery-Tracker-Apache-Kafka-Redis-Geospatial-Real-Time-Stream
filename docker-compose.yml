@@ -45,6 +45,7 @@ services:
       - "8000:8000"
     environment:
       PORT: "8000"
+      DEMO_MODE: "false"
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       REDIS_HOST: redis
       REDIS_PORT: "6379"

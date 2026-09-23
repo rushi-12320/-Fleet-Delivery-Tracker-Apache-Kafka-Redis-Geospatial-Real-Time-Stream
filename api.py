@@ -2,7 +2,8 @@ import time
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
-from config import get_redis_client, PORT
+from config import CENTER, DEMO_MODE, NUM_DRIVERS, PORT, get_redis_client
+from demo_fleet import DemoFleet
 
 app = FastAPI(title="Delivery Tracker API", version="2.0.0")
 
@@ -15,15 +16,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-r = get_redis_client()
+demo_fleet = DemoFleet(CENTER, NUM_DRIVERS) if DEMO_MODE else None
+r = None if DEMO_MODE else get_redis_client()
 
 
 @app.get("/health")
 def health():
-    """Healthcheck endpoint for Redis connection."""
+    """Healthcheck endpoint for the active telemetry mode."""
+    if DEMO_MODE:
+        return {"status": "ok", "mode": "demo", "redis": False}
+
     try:
-        ping = r.ping()
-        return {"status": "ok", "redis": ping}
+        ping = r.ping()  # type: ignore[union-attr]
+        return {"status": "ok", "mode": "streaming", "redis": ping}
     except Exception as exc:
         return {"status": "error", "redis": False, "error": str(exc)}
 
@@ -31,9 +36,19 @@ def health():
 @app.get("/stats")
 def get_stats():
     """Returns overview statistics of driver counts and active heartbeats."""
+    if DEMO_MODE:
+        drivers = demo_fleet.drivers()  # type: ignore[union-attr]
+        return {
+            "total_registered": len(drivers),
+            "active_now": len(drivers),
+            "offline": 0,
+            "redis_connected": False,
+            "mode": "demo",
+        }
+
     try:
-        total_drivers = r.zcard("drivers:geo")
-        alive_keys = r.keys("driver:*:alive")
+        total_drivers = r.zcard("drivers:geo")  # type: ignore[union-attr]
+        alive_keys = r.keys("driver:*:alive")  # type: ignore[union-attr]
         return {
             "total_registered": total_drivers,
             "active_now": len(alive_keys),
@@ -53,14 +68,18 @@ def get_stats():
 @app.get("/drivers")
 def list_all_drivers():
     """List all registered drivers in Redis with their live coordinates and alive status."""
-    members = r.zrange("drivers:geo", 0, -1)
+    if DEMO_MODE:
+        drivers = demo_fleet.drivers()  # type: ignore[union-attr]
+        return {"count": len(drivers), "drivers": drivers, "mode": "demo"}
+
+    members = r.zrange("drivers:geo", 0, -1)  # type: ignore[union-attr]
     if not members:
         return {"count": 0, "drivers": []}
 
-    coords = r.geopos("drivers:geo", *members)
+    coords = r.geopos("drivers:geo", *members)  # type: ignore[union-attr]
 
     # Check alive status and info in one pipeline
-    pipe = r.pipeline()
+    pipe = r.pipeline()  # type: ignore[union-attr]
     for name in members:
         pipe.exists(f"driver:{name}:alive")
         pipe.hgetall(f"driver:{name}:info")
@@ -103,8 +122,12 @@ def nearby_drivers(
     Find live nearby drivers within a radius (km).
     Stale drivers whose heartbeat expired in Redis (>15s) are automatically filtered out.
     """
+    if DEMO_MODE:
+        drivers = demo_fleet.nearby(lat, lon, radius_km, limit)  # type: ignore[union-attr]
+        return {"count": len(drivers), "drivers": drivers, "mode": "demo"}
+
     # 1. Ask Redis for the closest drivers. Fetch extra candidates because stale ones get filtered.
-    results = r.geosearch(
+    results = r.geosearch(  # type: ignore[union-attr]
         "drivers:geo",
         longitude=lon,
         latitude=lat,
@@ -119,7 +142,7 @@ def nearby_drivers(
         return {"count": 0, "drivers": []}
 
     # 2. Check every candidate's heartbeat key in ONE pipeline round-trip
-    pipe = r.pipeline()
+    pipe = r.pipeline()  # type: ignore[union-attr]
     for name, _dist, _coord in results:
         pipe.exists(f"driver:{name}:alive")
         pipe.hget(f"driver:{name}:info", "speed_kmh")

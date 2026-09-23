@@ -25,7 +25,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
 # Copy application source code
-COPY config.py producer.py consumer.py api.py run_all.py ./
+COPY config.py demo_fleet.py producer.py consumer.py api.py run_all.py ./
 
 # Expose dynamic web server port
 EXPOSE 8000

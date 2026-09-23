@@ -77,6 +77,23 @@ Before running the app locally, make sure you have:
 
 ## Quick Start
 
+### Run the public demo locally
+
+The default mode is a self-contained moving fleet demo. It does not require
+Kafka, Redis, Docker, or cloud credentials.
+
+```bash
+pip install -r requirements.txt
+python run_all.py
+```
+
+Open the dashboard URL printed by the server (normally `http://localhost:8000`)
+to see 20 simulated drivers move on the map.
+
+### Run the full Kafka + Redis pipeline (optional)
+
+Set `DEMO_MODE=false` in `.env` to use the full telemetry pipeline below.
+
 ### 1) Create and activate a virtual environment
 
 ```bash
@@ -194,7 +211,9 @@ Key settings include:
 
 ## Deployment
 
-For cloud deployment guidance, see [DEPLOYMENT.md](DEPLOYMENT.md).
+The default Render configuration publishes the self-contained public demo, so
+it does not require Redis or Kafka credentials. For the short deployment steps
+and optional full streaming setup, see [DEPLOYMENT.md](DEPLOYMENT.md).
 
 This project is also configured for Render deployment via [render.yaml](render.yaml).
 

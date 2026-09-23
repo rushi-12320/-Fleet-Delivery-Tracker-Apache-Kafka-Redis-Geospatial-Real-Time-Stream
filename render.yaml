@@ -14,23 +14,7 @@ services:
     envVars:
       - key: PORT
         value: 10000
-      - key: REDIS_URL
-        sync: false
-        # Example: rediss://default:YOUR_PASSWORD@your-cluster.upstash.io:6379
-      - key: KAFKA_BOOTSTRAP_SERVERS
-        sync: false
-        # Example: your-cluster.upstash.io:9092
-      - key: KAFKA_SECURITY_PROTOCOL
-        value: SASL_SSL
-      - key: KAFKA_SASL_MECHANISM
-        value: SCRAM-SHA-256
-      - key: KAFKA_SASL_USERNAME
-        sync: false
-      - key: KAFKA_SASL_PASSWORD
-        sync: false
-      - key: KAFKA_TOPIC
-        value: driver-locations
-      - key: KAFKA_GROUP_ID
-        value: location-writer
+      - key: DEMO_MODE
+        value: true
       - key: NUM_DRIVERS
         value: 20

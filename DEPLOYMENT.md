@@ -1,6 +1,25 @@
 # 🚀 Cloud Deployment Guide
 
-This guide explains how to deploy the **Fleet Delivery Tracker** to a managed cloud stack using **Upstash Redis** and optional Kafka services. The project is designed to work with a live Upstash Redis instance, including the deployed platform available here:
+## Fastest option: publish the self-contained demo
+
+The checked-in `render.yaml` starts this project with `DEMO_MODE=true`. It
+shows a live moving fleet without Kafka, Redis, Docker Compose, or cloud
+credentials.
+
+1. Push the repository to GitHub.
+2. In Render, choose **New +** -> **Blueprint** and select this repository.
+3. Apply the blueprint and wait for the build to finish.
+4. Open the generated `https://<service-name>.onrender.com` URL and share it.
+
+The dashboard shows 20 simulated drivers by default. Change `NUM_DRIVERS` in
+Render if you want a larger demo fleet. To use real Kafka and Redis data, set
+`DEMO_MODE=false` and continue with the optional streaming setup below.
+
+---
+
+## Optional: full cloud streaming pipeline
+
+This section explains how to deploy the **Fleet Delivery Tracker** to a managed cloud stack using **Upstash Redis** and optional Kafka services. The project is designed to work with a live Upstash Redis instance, including the deployed platform available here:
 
 https://console.upstash.com/redis/fb39a1ba-9192-4f0c-9c3e-b70f4f151f3a
 
