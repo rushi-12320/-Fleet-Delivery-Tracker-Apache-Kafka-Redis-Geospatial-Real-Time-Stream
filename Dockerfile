@@ -27,12 +27,12 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy application source code
 COPY config.py demo_fleet.py producer.py consumer.py api.py run_all.py ./
 
-# Expose dynamic web server port
+# Expose the Render-assigned port for the web service
 EXPOSE 8000
 
-# Default healthcheck
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:${PORT}/health || exit 1
+# Healthcheck uses the runtime PORT environment variable so it works on Render.
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=5 \
+    CMD python -c "import os, urllib.request; urllib.request.urlopen(f'http://localhost:{os.environ.get('PORT', '8000')}/health', timeout=5).read()" || exit 1
 
-# Start all services concurrently (Producer, Consumer, and FastAPI Dashboard)
-CMD ["python", "run_all.py"]
+# Run the single FastAPI app entrypoint that serves the dashboard and health endpoint.
+CMD ["python", "api.py"]
