@@ -16,7 +16,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-demo_fleet = DemoFleet(CENTER, NUM_DRIVERS) if DEMO_MODE else None
+demo_fleet = DemoFleet(CENTER, NUM_DRIVERS, nationwide=True) if DEMO_MODE else None
 r = None if DEMO_MODE else get_redis_client()
 
 
@@ -34,7 +34,7 @@ def fallback_to_demo_if_redis_unavailable():
             "falling back to demo mode."
         )
         DEMO_MODE = True
-        demo_fleet = DemoFleet(CENTER, NUM_DRIVERS)
+        demo_fleet = DemoFleet(CENTER, NUM_DRIVERS, nationwide=True)
 
 
 app.add_event_handler("startup", fallback_to_demo_if_redis_unavailable)
@@ -459,7 +459,7 @@ def index():
         <span class="metric-val offline" id="stat-offline">0</span>
       </div>
       <div class="metric-card">
-        <span class="metric-label">Drivers in Radar</span>
+        <span class="metric-label">Drivers on Map</span>
         <span class="metric-val" id="stat-total">0</span>
       </div>
       <div class="metric-card">
@@ -481,6 +481,7 @@ def index():
           <div class="search-row">
             <span>Radius Search Filter:</span>
             <span id="radius-val" style="color: var(--primary); font-weight:600;">10 km</span>
+            <button id="all-india-button" type="button" style="background:transparent;border:1px solid var(--surface-border);border-radius:4px;color:var(--primary);padding:3px 7px;cursor:pointer;font-size:.68rem;">All India</button>
           </div>
           <input type="range" id="radius-slider" min="1" max="25" value="10" style="width: 100%; accent-color: var(--primary);">
           <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 4px;">
@@ -498,7 +499,9 @@ def index():
 
   <script>
     const CENTER = [19.0760, 72.8777]; // Mumbai
-    const map = L.map('map', { zoomControl: false }).setView(CENTER, 12);
+    const INDIA_BOUNDS = [[6.5, 68.0], [37.5, 98.0]];
+    const map = L.map('map', { zoomControl: false });
+    map.fitBounds(INDIA_BOUNDS, { padding: [24, 24] });
     L.control.zoom({ position: 'topright' }).addTo(map);
 
     // Dark sleek CartoDB tile layer
@@ -518,7 +521,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=c
       fillOpacity: 0.08,
       weight: 1.5,
       dashArray: '5, 5'
-    }).addTo(map);
+    });
 
     const centerMarker = L.circleMarker(searchCenter, {
       radius: 6,
@@ -526,10 +529,31 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=c
       fillColor: '#38bdf8',
       fillOpacity: 1,
       weight: 2
-    }).addTo(map).bindPopup("<b>Radar Center</b><br>Click anywhere on map to reposition search center.");
+    }).bindPopup("<b>Radar Center</b><br>Click anywhere on map to reposition search center.");
+
+    let radarSearchActive = false;
+
+    function enableRadarSearch() {
+      const wasInactive = !radarSearchActive;
+      radarSearchActive = true;
+      if (!map.hasLayer(radarCircle)) radarCircle.addTo(map);
+      if (!map.hasLayer(centerMarker)) centerMarker.addTo(map);
+      if (wasInactive) map.setView(searchCenter, 11);
+    }
+
+    function showAllIndia() {
+      radarSearchActive = false;
+      radarDriverIds = null;
+      nearbyRequestId++;
+      map.removeLayer(radarCircle);
+      map.removeLayer(centerMarker);
+      map.fitBounds(INDIA_BOUNDS, { padding: [24, 24] });
+      fetchFleet();
+    }
 
     map.on('click', (e) => {
       searchCenter = [e.latlng.lat, e.latlng.lng];
+      enableRadarSearch();
       radarCircle.setLatLng(searchCenter);
       centerMarker.setLatLng(searchCenter);
       fetchNearbyDrivers();
@@ -538,6 +562,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=c
     document.getElementById('radius-slider').addEventListener('input', (e) => {
       searchRadiusKm = parseFloat(e.target.value);
       document.getElementById('radius-val').innerText = `${searchRadiusKm} km`;
+      enableRadarSearch();
       radarCircle.setRadius(searchRadiusKm * 1000);
       fetchNearbyDrivers();
     });
@@ -576,9 +601,9 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=c
 
         const data = await res.json();
         fleetDrivers = data.drivers || [];
-        const drivers = radarDriverIds === null
-          ? fleetDrivers
-          : fleetDrivers.filter(driver => radarDriverIds.has(driver.driver_id));
+        const drivers = radarSearchActive && radarDriverIds !== null
+          ? fleetDrivers.filter(driver => radarDriverIds.has(driver.driver_id))
+          : fleetDrivers;
 
         let activeCount = 0;
         let offlineCount = 0;
@@ -698,12 +723,14 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=c
       }
     }
 
-    // Initial fetch & loop every 2 seconds
+    document.getElementById('all-india-button').addEventListener('click', showAllIndia);
+
+    // Show the full fleet initially; nearby filtering starts on map or radius interaction.
     fetchFleet();
-    fetchNearbyDrivers();
-    // Re-run the radar query so drivers that move into or out of the circle
-    // appear and disappear automatically.
-    setInterval(fetchNearbyDrivers, 2000);
+    setInterval(() => {
+      if (radarSearchActive) fetchNearbyDrivers();
+      else fetchFleet();
+    }, 2000);
   </script>
 </body>
 </html>

@@ -8,24 +8,55 @@ import threading
 import time
 
 
-class DemoFleet:
-    """Generates deterministic, realistic-looking driver movement around a centre point."""
+INDIA_CITIES = (
+    ("delhi", (28.6139, 77.2090)),
+    ("srinagar", (34.0837, 74.7973)),
+    ("chandigarh", (30.7333, 76.7794)),
+    ("jaipur", (26.9124, 75.7873)),
+    ("lucknow", (26.8467, 80.9462)),
+    ("patna", (25.5941, 85.1376)),
+    ("guwahati", (26.1445, 91.7362)),
+    ("kolkata", (22.5726, 88.3639)),
+    ("bhubaneswar", (20.2961, 85.8245)),
+    ("ahmedabad", (23.0225, 72.5714)),
+    ("mumbai", (19.0760, 72.8777)),
+    ("pune", (18.5204, 73.8567)),
+    ("bhopal", (23.2599, 77.4126)),
+    ("hyderabad", (17.3850, 78.4867)),
+    ("bengaluru", (12.9716, 77.5946)),
+    ("chennai", (13.0827, 80.2707)),
+    ("kochi", (9.9312, 76.2673)),
+    ("goa", (15.2993, 74.1240)),
+    ("ranchi", (23.3441, 85.3096)),
+    ("imphal", (24.8170, 93.9368)),
+)
 
-    def __init__(self, center: tuple[float, float], driver_count: int) -> None:
-        self._center = center
+
+class DemoFleet:
+    """Generates deterministic, realistic-looking driver movement around city centers."""
+
+    def __init__(
+        self,
+        center: tuple[float, float],
+        driver_count: int,
+        nationwide: bool = False,
+    ) -> None:
         self._lock = threading.Lock()
         self._random = random.Random(20260923)
         self._last_update = time.monotonic()
-        self._drivers = [
-            {
-                "driver_id": f"demo-driver-{index:02d}",
-                "lat": center[0] + self._random.uniform(-0.035, 0.035),
-                "lon": center[1] + self._random.uniform(-0.035, 0.035),
+        locations = INDIA_CITIES if nationwide else (("local", center),)
+        self._drivers = []
+        for index in range(1, driver_count + 1):
+            city, city_center = locations[(index - 1) % len(locations)]
+            self._drivers.append({
+                "driver_id": f"demo-{city}-{index:02d}",
+                "center_lat": city_center[0],
+                "center_lon": city_center[1],
+                "lat": city_center[0] + self._random.uniform(-0.08, 0.08),
+                "lon": city_center[1] + self._random.uniform(-0.08, 0.08),
                 "heading": self._random.uniform(0, math.tau),
                 "speed_kmh": round(self._random.uniform(18, 42), 1),
-            }
-            for index in range(1, driver_count + 1)
-        ]
+            })
 
     def _advance_locked(self) -> None:
         now = time.monotonic()
@@ -46,8 +77,10 @@ class DemoFleet:
             driver["lat"] += lat_delta
             driver["lon"] += lon_delta
 
-            # Keep the simulated fleet within the visible city area.
-            if abs(driver["lat"] - self._center[0]) > 0.055 or abs(driver["lon"] - self._center[1]) > 0.055:
+            if (
+                abs(driver["lat"] - driver["center_lat"]) > 0.12
+                or abs(driver["lon"] - driver["center_lon"]) > 0.12
+            ):
                 driver["heading"] += math.pi
 
     @staticmethod
