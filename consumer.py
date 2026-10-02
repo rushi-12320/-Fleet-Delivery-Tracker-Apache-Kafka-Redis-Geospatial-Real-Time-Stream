@@ -14,6 +14,7 @@ from config import (
     REDIS_HOST,
     REDIS_PORT,
     REDIS_URL,
+    REDIS_URL_CONFIGURED,
     get_kafka_consumer_config,
     get_redis_client,
 )
@@ -31,7 +32,7 @@ print("=" * 60)
 try:
     r = get_redis_client()
     r.ping()
-    redis_target = REDIS_URL.split("@")[-1] if REDIS_URL else f"{REDIS_HOST}:{REDIS_PORT}"
+    redis_target = REDIS_URL.split("@")[-1] if REDIS_URL_CONFIGURED else f"{REDIS_HOST}:{REDIS_PORT}"
     print(f"[OK] Connected to Redis at {redis_target}")
 except Exception as e:
     print(f"[ERROR] Cannot connect to Redis: {e}")

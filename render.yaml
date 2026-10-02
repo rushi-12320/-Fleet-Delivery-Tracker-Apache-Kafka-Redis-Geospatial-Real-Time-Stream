@@ -19,3 +19,7 @@ services:
         value: true
       - key: NUM_DRIVERS
         value: 20
+      - key: REDIS_URL
+        value: ""
+      - key: KAFKA_BROKER
+        value: ""

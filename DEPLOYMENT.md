@@ -102,15 +102,23 @@ Render provides free container hosting with public HTTPS URLs:
 1. Sign up or log into [dashboard.render.com](https://dashboard.render.com/).
 2. Click **New +** (top right) -> select **Blueprint**.
 3. Connect your GitHub account and select your `delivery-tracking-system` repository.
-4. Render will read [`render.yaml`](file:///c:/Users/rp520/Documents/Delivery%20Tracking%20System/render.yaml) automatically.
-5. In the configuration screen, fill in the 4 environment variables from Step 1:
-   - `REDIS_URL`: `rediss://default:...@...upstash.io:6379`
-   - `KAFKA_BOOTSTRAP_SERVERS`: `...upstash.io:9092`
-   - `KAFKA_SASL_USERNAME`: `...`
-   - `KAFKA_SASL_PASSWORD`: `...`
-6. Click **Apply**.
+4. Render will read [`render.yaml`](render.yaml) automatically. Apply the blueprint to create the web service.
+5. In the Render dashboard, open the service's **Environment** tab and set:
+   - `REDIS_URL`: the managed Redis connection string (for example, Render's internal `redis://...:6379` URL)
+   - `KAFKA_BROKER`: your Kafka cluster's bootstrap server address
+   - `KAFKA_SECURITY_PROTOCOL`: `SASL_SSL` for hosted Kafka, or `PLAINTEXT` for local Kafka
+   - `KAFKA_SASL_USERNAME` and `KAFKA_SASL_PASSWORD`: credentials from your Kafka provider
+   - `DEMO_MODE`: `false` to request streaming mode
+6. Save changes to redeploy.
 
-Render will automatically build your Docker container, start the background consumer, the simulated GPS producer, and host the live FastAPI dashboard with a free `https://delivery-tracking-system.onrender.com` URL!
+The blueprint's web service starts `api.py`; it does not start `producer.py` or
+`consumer.py`. Deploy those as separate worker services if you want the hosted
+application to ingest live Kafka events. The demo remains available without
+those workers or hosted service credentials.
+
+Render builds the Docker container and hosts the FastAPI dashboard at its assigned
+`https://<service-name>.onrender.com` URL. The blueprint does not start the
+producer or consumer workers.
 
 ---
 
@@ -128,7 +136,7 @@ You can test your cloud credentials locally at any time by creating a `.env` fil
 
 ```env
 REDIS_URL=rediss://default:YOUR_PASSWORD@your-db.upstash.io:6379
-KAFKA_BOOTSTRAP_SERVERS=your-kafka.upstash.io:9092
+KAFKA_BROKER=your-kafka.upstash.io:9092
 KAFKA_SECURITY_PROTOCOL=SASL_SSL
 KAFKA_SASL_MECHANISM=SCRAM-SHA-256
 KAFKA_SASL_USERNAME=your_username

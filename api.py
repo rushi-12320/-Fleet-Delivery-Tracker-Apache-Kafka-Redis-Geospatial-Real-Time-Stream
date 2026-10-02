@@ -20,6 +20,26 @@ demo_fleet = DemoFleet(CENTER, NUM_DRIVERS) if DEMO_MODE else None
 r = None if DEMO_MODE else get_redis_client()
 
 
+def fallback_to_demo_if_redis_unavailable():
+    global DEMO_MODE, demo_fleet
+
+    if DEMO_MODE:
+        return
+
+    try:
+        r.ping()
+    except Exception as exc:
+        print(
+            f"[WARN] Redis unavailable at startup ({type(exc).__name__}); "
+            "falling back to demo mode."
+        )
+        DEMO_MODE = True
+        demo_fleet = DemoFleet(CENTER, NUM_DRIVERS)
+
+
+app.add_event_handler("startup", fallback_to_demo_if_redis_unavailable)
+
+
 @app.get("/health")
 def health():
     """Healthcheck endpoint for the active telemetry mode."""
@@ -439,7 +459,7 @@ def index():
         <span class="metric-val offline" id="stat-offline">0</span>
       </div>
       <div class="metric-card">
-        <span class="metric-label">Total Registered</span>
+        <span class="metric-label">Drivers in Radar</span>
         <span class="metric-val" id="stat-total">0</span>
       </div>
       <div class="metric-card">
@@ -523,6 +543,9 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=c
     });
 
     const driverMarkers = {};
+    let fleetDrivers = [];
+    let radarDriverIds = null;
+    let nearbyRequestId = 0;
 
     function createDriverIcon(driverId, isAlive) {
       return L.divIcon({
@@ -552,17 +575,30 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=c
         }
 
         const data = await res.json();
-        const drivers = data.drivers || [];
+        fleetDrivers = data.drivers || [];
+        const drivers = radarDriverIds === null
+          ? fleetDrivers
+          : fleetDrivers.filter(driver => radarDriverIds.has(driver.driver_id));
 
         let activeCount = 0;
         let offlineCount = 0;
         listContainer.innerHTML = '';
 
+        // Keep only markers returned by the active radar search on the map.
+        const visibleDriverIds = new Set(drivers.map(driver => driver.driver_id));
+        Object.keys(driverMarkers).forEach(driverId => {
+          if (!visibleDriverIds.has(driverId)) {
+            driverMarkers[driverId].remove();
+            delete driverMarkers[driverId];
+          }
+        });
+
         if (drivers.length === 0) {
           listContainer.innerHTML = `
             <div style="padding: 20px; text-align: center; color: var(--text-muted); line-height: 1.6;">
-              No live telemetry yet.<br>
-              Start the producer or connect Redis/Kafka and the map will populate automatically.
+              ${fleetDrivers.length === 0
+                ? 'No live telemetry yet.<br>Start the demo or connect Redis/Kafka and the map will populate automatically.'
+                : 'No active drivers are inside this radar area.<br>Click a different location or increase the search radius.'}
             </div>
           `;
           document.getElementById('stat-active').innerText = '0';
@@ -641,14 +677,22 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=c
     }
 
     async function fetchNearbyDrivers() {
+      const requestId = ++nearbyRequestId;
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 8000);
-        const url = `/drivers/nearby?lat=${searchCenter[0]}&lon=${searchCenter[1]}&radius_km=${searchRadiusKm}&limit=20`;
+        const url = `/drivers/nearby?lat=${searchCenter[0]}&lon=${searchCenter[1]}&radius_km=${searchRadiusKm}&limit=50`;
         const res = await fetch(url, { signal: controller.signal });
         clearTimeout(timeoutId);
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
         const data = await res.json();
-        console.log(`Nearby drivers (${data.count}):`, data.drivers);
+        if (requestId !== nearbyRequestId) {
+          return;
+        }
+        radarDriverIds = new Set((data.drivers || []).map(driver => driver.driver_id));
+        fetchFleet();
       } catch (err) {
         console.error("Nearby search error:", err);
       }
@@ -656,7 +700,10 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=c
 
     // Initial fetch & loop every 2 seconds
     fetchFleet();
-    setInterval(fetchFleet, 2000);
+    fetchNearbyDrivers();
+    // Re-run the radar query so drivers that move into or out of the circle
+    // appear and disappear automatically.
+    setInterval(fetchNearbyDrivers, 2000);
   </script>
 </body>
 </html>
